@@ -1,21 +1,6 @@
 import pandas as pd
 
-# pc.main(r'1quIRoVsA3ySxtYkdKTr6eNFrlFIbKgR0')
-
-if __name__ == '__main__':
-    import mysql.connector as cnn
-    config = {'user':'root', 'password':'Pipoca123', 'host':'localhost', 'raise_on_warnings':True}
-
-    conn = cnn.connect(**config)
-    cursor = conn.cursor()
-    
-    def Fechar(cursor):
-        cursor.close()
-        conn.close()
-
-def Puxar_alocacoes(conn, cursor):
-    cursor.execute(f"USE sirius")
-    
+def Puxar_alocacoes(cursor):
     try:
         cursor.execute("DROP TABLE IF EXISTS Alocacoes;")
     except cnn.Error as err:
@@ -57,6 +42,24 @@ def Puxar_alocacoes(conn, cursor):
         """, (index, row['Ativo'], row['Classe'], row['Direção'], row['Book'], row['Preço'], row['Dólar/Euro'], row['Vencimento'], row['Tamanho']))
 
 if __name__ == "__main__":
-    Alocações(conn, cursor)
+    import mysql.connector as cnn
+    from os import listdir, getcwd
+    from Google_Base import Puxar_controle
+    
+    config = {'user':'root', 'password':'Pipoca123', 'host':'localhost', 'raise_on_warnings':True}
+    conn = cnn.connect(**config)
+    cursor = conn.cursor()
+    
+    path_credentials = r'C:\Users\lucas\Downloads\token.json'
+    
+    def Fechar(conn, cursor):
+        cursor.close()
+        conn.close()
+    
+    if not "download_controle.xlsx" in listdir(getcwd()):
+        Puxar_controle(r'1quIRoVsA3ySxtYkdKTr6eNFrlFIbKgR0', path_credentials) # Atualizar ID do controle Sirius
+    
+    Puxar_alocacoes(cursor)
     conn.commit()
-    Fechar(cursor)
+    
+    Fechar(conn, cursor)

@@ -3,6 +3,7 @@ import yfinance as yf
 import datetime as dt
 from pandas_datareader import data as web
 import bs4
+from numpy import array, ndarray
 
 yf.pdr_override()
 
@@ -11,21 +12,20 @@ class Prices:
         '''
         Introdução ao código
         
-        Ativos: {ticker: tipo}
+        Ativos: recomendado lista
         '''
-        self.ativos = ativos
-        if self.ativos == None:
+        
+        if type(ativos) in [type([]), type(array([]))]:
+            self.ativos = ativos
+        else:
             raise ValueError('Adicione um ativo.')
         
         self.start = start
         self.end = end
         
-    def get_tickers_brazil(self):
-        return web.get_data_yahoo(self.ativos, self.start, self.end)['Adj Close']
-    
-    def get_tickers_us(self):
-        return 0
-    
+    def get_tickers_yf(self):
+        return web.get_data_yahoo(self.ativos, self.start, self.end)['Adj Close']   
+  
     def get_fut_data(self):
         return 0
     
@@ -36,11 +36,15 @@ class Prices:
         return 0
     
     def get_cdi(self):
-        DI = f'https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?formato=csv&dataInicial={pd.to_datetime(self.start)}&dataFinal={pd.to_datetime(self.end)}'
+        DI = f'https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?formato=csv&dataInicial={(pd.to_datetime(self.start).strftime("%d/%m/%y"))}&dataFinal={(pd.to_datetime(self.end).strftime("%d/%m/%y"))}'
         Download = pd.read_csv(DI)
         Download.columns = ['DI']
         Download.index = Download.index.str.rstrip(f';"0')
+        Download.index = pd.to_datetime(Download.index, dayfirst=True)
         Download['DI'] = Download['DI'].str.rstrip(f'"').astype(int)/100000000
         return Download
 
-Prices('PRIO3.SA').get_tickers_brazil()
+
+if __name__ == '__main__':
+    x = Prices([]).get_cdi()
+    print(x)
