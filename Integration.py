@@ -53,15 +53,17 @@ class Integration:
         '''
         Atualiza os preços e/ou variações(para futuros) no histórico
         '''
+        Tables = ['curva_fut', 'historico']
         
         # Baixa os ativos
-        Data = Save(self.conn, self.cursor).get_data()
+        Curva_FUT, Data = Save(self.conn, self.cursor).get_data()
         
-        # Deleta a TABLE do histórico
-        try:
-            self.cursor.execute("DROP TABLE IF EXISTS historico;")
-        except cnn.Error as err:
-            print(f"Erro ao excluir tabela: {err}")
+        # Deleta as TABLEs do histórico e curva_fut
+        for i in Tables:
+            try:
+                self.cursor.execute(f"DROP TABLE IF EXISTS {i};")
+            except cnn.Error as err:
+                print(f"Erro ao excluir tabela: {err}")
 
         # Cria TABLE do histórico
         try:
@@ -75,13 +77,41 @@ class Integration:
             """)
         except cnn.Error as err:
             print(f"Erro ao criar tabela: {err}")
+            
+        # Cria TABLE das Curvas de Futuros
+        try:
+            self.cursor.execute("""
+                CREATE TABLE curva_fut (
+                id INT AUTO_INCREMENT,
+                data DATE,
+                mercadoria VARCHAR(10),
+                vencimento VARCHAR(10),
+                ajuste FLOAT,
+                taxa FLOAT,
+                PRIMARY KEY (id));
+            """)
+        except cnn.Error as err:
+            print(f"Erro ao criar tabela: {err}")
         
         # Reseta a ID
-        try:
-            self.cursor.execute(f"ALTER TABLE historico AUTO_INCREMENT = 1;")
-        except cnn.Error as err:
-            print(f'Errp ao resetar o ID: {err}')
+        for i in Tables:
+            try:
+                self.cursor.execute(f"ALTER TABLE {i} AUTO_INCREMENT = 1;")
+            except cnn.Error as err:
+                print(f'Errp ao resetar o ID: {err}')
         
+        # Para cada ativo, adicionar informações na TABLE curva_fut
+        comandos = []
+        for index, line in Curva_FUT.iterrows():
+            # if line['Mercadoria'] == 'DI1' or line['Mercadoria'] == 'DAP':
+            #     line['Taxa'] = (100000/line['Preço de Ajuste Atual'])**(252/DU) - 1
+            comandos += ((index, line['Mercadoria'], line['Vct'], line['Preço de Ajuste Atual'], None),)
+            
+        self.cursor.executemany("""
+            INSERT INTO curva_fut (data, mercadoria, vencimento, ajuste, taxa)
+            VALUES (%s, %s, %s, %s, %s);
+        """, comandos)
+                
         # Para cada ativo, adicionar informações na TABLE histórico
         comandos = []
         for ativo in Data.columns:

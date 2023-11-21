@@ -43,8 +43,7 @@ class Add_ativos:
         # Scrapping de variações dos futuros na B3
         Ativos_FUT = self.ativos.set_index('Tipo').loc[['Futuros']]
         Ativos_FUT = list(Ativos_FUT['Ativos'].values)
-        Curva_FUT = Prices(Ativos_FUT).get_fut_data([pd.to_datetime(i).strftime(r'%d/%m/%y') for i in YF.index])
-        FUT = Curva_FUT
+        Curva_FUT, FUT = Prices(Ativos_FUT).get_fut_data([pd.to_datetime(i).strftime(r'%d/%m/%y') for i in YF.index])
         for index in FUT.index:
             FUT.loc[index, 'Ticker'] = FUT.loc[index, 'Mercadoria']+'-'+FUT.loc[index, 'Vct']
         FUT = FUT[['Ticker', 'Valor do Ajuste por Contrato (R$)']].pivot(columns='Ticker', values='Valor do Ajuste por Contrato (R$)')
@@ -54,7 +53,7 @@ class Add_ativos:
         
         # Une os DataFrames e retorna a função
 
-        return pd.concat([YF.loc[CDI.index], CDI.loc[CDI.index]], axis=1).join(FUT, how='inner').ffill()
+        return Curva_FUT, pd.concat([YF.loc[CDI.index], CDI.loc[CDI.index]], axis=1).join(FUT, how='inner').ffill()
 
 # Se executado diretamente               
 if __name__ == "__main__":
@@ -73,8 +72,8 @@ if __name__ == "__main__":
         conn.close()
 
     # Função
-    x = Add_ativos(conn, cursor).get_data()
-    print(x)
+    x, y = Add_ativos(conn, cursor).get_data()
+    print(x.index)
     # Fecha a conexão
     Fechar()
 

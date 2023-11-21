@@ -158,10 +158,10 @@ class Prices:
         Data.loc[(Data[Data.columns[-2]]<0), Data.columns[-1]] *= -1 
 
         if self.ativos == []:
-            return Data
+            return Data # Curva_FUT
         else:
-            Data = Data[Data.set_index(['Mercadoria', 'Vct']).index.isin(produtos.set_index(['Mercadoria', 'Vct']).index)]
-            return Data
+            Data_1 = Data[Data.set_index(['Mercadoria', 'Vct']).index.isin(produtos.set_index(['Mercadoria', 'Vct']).index)]
+            return Data, Data_1 # Curva_FUT, FUT
 
     def get_titulos_br(self):
         '''
