@@ -1,7 +1,7 @@
 import mysql.connector as cnn
 import yfinance as yf
 import pandas as pd
-from Orders import Puxar_alocacoes
+from Orders import Puxar_alocacoes, Puxar_cadastro
 from Google_Base import Puxar_controle
 from Prices.Save_prices import Add_ativos as Save
 import os
@@ -41,6 +41,9 @@ class Integration:
         
         # Da planilha de controle, inserir as alocações no servidor
         Puxar_alocacoes(self.cursor)
+        
+        # Da planilha de controle, inserir o cadastro dos ativos no servidor
+        Puxar_cadastro(self.cursor)
         
     def Fechar(self):
         '''
