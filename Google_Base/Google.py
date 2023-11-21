@@ -4,10 +4,16 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
+
+'''
+Código base para a autorização do Google API para Google Drive.
+Não autoral, possivelmente incrementável no futuro.
+Ainda, possivelmente, irá ser utilizada a função "upload_file" para
+a atualização da planilha de controle no drive da Impactus.
+'''
 
 def get_credentials(path_credentials):
     creds = None
@@ -24,7 +30,7 @@ def get_credentials(path_credentials):
     return creds
 
 # Para arquivos padrão google (sheets, docs, ...)
-# def download_file(file_id):
+# def download_file_standard_google(file_id):
 #     creds = get_credentials()
 #     service = build("drive", "v3", credentials=creds)
 #     request = service.files().export_media(fileId=file_id, mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -33,6 +39,7 @@ def get_credentials(path_credentials):
 #         downloader = io.BytesIO(request.execute())
 #         fh.write(downloader.read())
 
+# Download de arquivos de diversos formatos
 def download_file(file_id, path_credentials, name = None):
     creds = get_credentials(path_credentials)
     service = build("drive", "v3", credentials=creds)
@@ -48,7 +55,8 @@ def download_file(file_id, path_credentials, name = None):
         while done is False:
             _, done = downloader.next_chunk()
 
-
+# Upload de arquivos no drive (otimizado para .xlsx)
+# Ainda não testado
 def upload_file(file_path, folder_id, path_credentials):
     creds = get_credentials(path_credentials)
     service = build("drive", "v3", credentials=creds)

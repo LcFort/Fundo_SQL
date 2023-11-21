@@ -37,7 +37,7 @@ class Integration:
         
         # Se não tiver baixado a planilha de controle, baixe
         if not r"download_controle.xlsx" in os.listdir(os.getcwd()):
-            Puxar_controle(rf'{id_arquivo}')
+            Puxar_controle(rf'{id_arquivo}', path_credentials)
         
         # Da planilha de controle, inserir as alocações no servidor
         Puxar_alocacoes(self.cursor)
@@ -53,50 +53,59 @@ class Integration:
         '''
         Atualiza os preços e/ou variações(para futuros) no histórico
         '''
-        Data = Save(self.conn, self.cursor).get_data().ffill()
         
+        # Baixa os ativos
+        Data = Save(self.conn, self.cursor).get_data()
+        
+        # Deleta a TABLE do histórico
         try:
             self.cursor.execute("DROP TABLE IF EXISTS historico;")
         except cnn.Error as err:
             print(f"Erro ao excluir tabela: {err}")
 
+        # Cria TABLE do histórico
         try:
             self.cursor.execute("""
                 CREATE TABLE historico (
                 id INT AUTO_INCREMENT,
                 data DATE,
-                ativo VARCHAR(20),
+                ativo VARCHAR(25),
                 precovar FLOAT,
                 PRIMARY KEY (id));
             """)
         except cnn.Error as err:
             print(f"Erro ao criar tabela: {err}")
         
+        # Reseta a ID
         try:
             self.cursor.execute(f"ALTER TABLE historico AUTO_INCREMENT = 1;")
         except cnn.Error as err:
             print(f'Errp ao resetar o ID: {err}')
         
+        # Para cada ativo, adicionar informações na TABLE histórico
+        comandos = []
         for ativo in Data.columns:
-            if pd.isnull(ativo):
+            if pd.isnull(ativo): # Se ativo == nan
                 print(1)
+            # Para cada data (index) no DataFrame
             for index in Data[ativo].index:
-                if pd.isnull(index):
+                if pd.isnull(index): # Se index == nan
                     print(2)
-                if pd.isnull(Data.loc[index, ativo]):
+                if pd.isnull(Data.loc[index, ativo]): # Se dados do ativo (x) e index (y) == nan
                     print(3)
-                self.cursor.execute("""
-                    INSERT INTO historico (data, ativo, precovar)
-                    VALUES (%s, %s, %s);
-                """, (index, ativo, Data.loc[index, ativo]))
-                
+                # Adiciona no servidor
+                comandos += ((index, ativo, Data.loc[index, ativo]),)
+
+        self.cursor.executemany("""
+            INSERT INTO historico (data, ativo, precovar)
+            VALUES (%s, %s, %s);
+        """, comandos)
+        
+        # Executa comandos no servidor 
         self.conn.commit()
+        
+        # Fecha a conexão
         self.Fechar()
 
-# cursor.execute('SHOW DATABASES;')
-
-# resultados = cursor.fetchall()
-
-# print([i for i in resultados])
-
+# Função
 Integration(config, path_credentials).update_hist()
