@@ -150,6 +150,9 @@ class Prices:
             Data['Mercadoria'] = Data['Mercadoria'].ffill().str.split(' - ').apply(lambda x: x[0])
             Data.index = pd.to_datetime([day_confirm for i in range(len(Data['Vct'].values))]).date
         
+        else: # Parte 4
+            ValueError("Não foi possível identificar a data (date) fornecida. Favor, leia o código 'Preços.py' get_fut_data()")
+        
         Data = Data[~Data.index.isin(self.feriados)]
         
         for col in Data.columns[-4:]:
