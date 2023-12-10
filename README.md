@@ -1,5 +1,5 @@
 # Fundo_SQL
-Código para a integração do Fundo Sirius da Impactus UFRJ para SQL.
+Código para a integração do Fundo Fictício Sirius da Impactus UFRJ para SQL.
 
 # Passo a passo da utilização
 
