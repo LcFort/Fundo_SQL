@@ -1,9 +1,9 @@
 import mysql.connector as cnn
-import yfinance as yf
+import datetime as dt
 import pandas as pd
-from Orders import Puxar_alocacoes, Puxar_cadastro
+from Orders import Controle_Ativos
 from Google_Base import Puxar_controle
-from Prices.Save_prices import Add_ativos as Save
+from Prices.Save_prices import Add_ativos
 import os
 import numpy as np
 
@@ -40,10 +40,10 @@ class Integration:
             Puxar_controle(rf'{id_arquivo}', path_credentials)
         
         # Da planilha de controle, inserir as alocações no servidor
-        Puxar_alocacoes(self.cursor)
+        Controle_Ativos(self.cursor).Puxar_alocacoes()
         
         # Da planilha de controle, inserir o cadastro dos ativos no servidor
-        Puxar_cadastro(self.cursor)
+        self.cadastro = Controle_Ativos(self.cursor).Puxar_cadastro()
         
     def Fechar(self):
         '''
@@ -59,7 +59,7 @@ class Integration:
         Tables = ['curva_fut', 'historico']
         
         # Baixa os ativos
-        Curva_FUT, Data = Save(self.conn, self.cursor).get_data()
+        Curva_FUT, Data = Add_ativos(self.conn, self.cursor).get_data()
         
         # Deleta as TABLEs do histórico e curva_fut
         for i in Tables:
@@ -88,9 +88,12 @@ class Integration:
                 id INT AUTO_INCREMENT,
                 data DATE,
                 mercadoria VARCHAR(10),
-                vencimento VARCHAR(10),
+                vertice VARCHAR(10),
+                vencimento DATE,
                 ajuste FLOAT,
                 taxa FLOAT,
+                variacao FLOAT,
+                variacao_contrato FLOAT,
                 PRIMARY KEY (id));
             """)
         except cnn.Error as err:
@@ -101,18 +104,21 @@ class Integration:
             try:
                 self.cursor.execute(f"ALTER TABLE {i} AUTO_INCREMENT = 1;")
             except cnn.Error as err:
-                print(f'Errp ao resetar o ID: {err}')
+                print(f'Erro ao resetar o ID: {err}')
         
         # Para cada ativo, adicionar informações na TABLE curva_fut
         comandos = []
         for index, line in Curva_FUT.iterrows():
             # if line['Mercadoria'] == 'DI1' or line['Mercadoria'] == 'DAP':
+            #     line['Ticker'] = line['Mercadoria'] + '-' + line['Vct']
             #     line['Taxa'] = (100000/line['Preço de Ajuste Atual'])**(252/DU) - 1
-            comandos += ((index, line['Mercadoria'], line['Vct'], line['Preço de Ajuste Atual'], None),)
-            
+            #     pd.bdate_range(index, )
+            comandos += ((index, line['Mercadoria'], line['Vct'], None,
+                          line['Preço de Ajuste Atual'], None, line['Variação'], line['Valor do Ajuste por Contrato (R$)']),)
+        print(comandos[0])
         self.cursor.executemany("""
-            INSERT INTO curva_fut (data, mercadoria, vencimento, ajuste, taxa)
-            VALUES (%s, %s, %s, %s, %s);
+            INSERT INTO curva_fut (data, mercadoria, vertice, vencimento, ajuste, taxa, variacao, variacao_contrato)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """, comandos)
                 
         # Para cada ativo, adicionar informações na TABLE histórico
@@ -125,7 +131,7 @@ class Integration:
                 if pd.isnull(index): # Se index == nan
                     print(2)
                 if pd.isnull(Data.loc[index, ativo]): # Se dados do ativo (x) e index (y) == nan
-                    print(3)
+                    continue # Procedimento padrão, não puxou o ativo pois ele venceu (por exemplo). Em caso de falha, verificar outros meios, aqui não é o problema
                 # Adiciona no servidor
                 comandos += ((index, ativo, Data.loc[index, ativo]),)
 
@@ -142,3 +148,8 @@ class Integration:
 
 # Função
 Integration(config, path_credentials).update_hist()
+
+# Fazer table posições (ativo book Q)
+# Refazer a coloção dos tipos na classificação dos ativos
+# Ver se os dias que tivemos posições, tivemos preços (check)
+# Calcular cota (caixa + movimentado + ajst fut - tx admin + (dividendos))
